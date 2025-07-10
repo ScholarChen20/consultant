@@ -11,10 +11,20 @@ public class ReservationService {
     private ReservationMapper reservationMapper;
 
     //1.添加预约信息的方法
+
+    /**
+     * 添加预约信息
+     * @param reservation
+     */
     public void insert(Reservation reservation) {
         reservationMapper.insert(reservation);
     }
 
+    /**
+     * 根据手机号查询预约信息
+     * @param phone
+     * @return
+     */
     //2.查询预约信息的方法(根据手机号查询)
     public Reservation findByPhone(String phone) {
         return reservationMapper.findByPhone(phone);

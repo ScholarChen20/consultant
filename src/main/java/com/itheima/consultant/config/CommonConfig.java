@@ -33,9 +33,9 @@ public class CommonConfig {
     @Autowired
     private ChatMemoryStore redisChatMemoryStore;
     @Autowired
-    private EmbeddingModel embeddingModel;
+    private EmbeddingModel embeddingModel; //文本嵌入模型对象
     @Autowired
-    private RedisEmbeddingStore redisEmbeddingStore;
+    private RedisEmbeddingStore redisEmbeddingStore;  //redis 文本嵌入存储对象
     /*@Bean
     public ConsultantService consultantService(){
         ConsultantService consultantService = AiServices.builder(ConsultantService.class)
@@ -83,22 +83,22 @@ public class CommonConfig {
      * 构建一个向量数据库操作对象, 这个对象负责向量化文本数据, 存储到向量数据库中
      * @return
      */
-    //@Bean
+//    @Bean  //不用每次启动时创建向量数据库, 只需启动一次
     public EmbeddingStore store(){//embeddingStore的对象, 这个对象的名字不能重复,所以这里使用store
         //1.加载文档进内存
         //List<Document> documents = ClassPathDocumentLoader.loadDocuments("content");
-        List<Document> documents = ClassPathDocumentLoader.loadDocuments("content",new ApachePdfBoxDocumentParser());
-        //List<Document> documents = FileSystemDocumentLoader.loadDocuments("C:\\Users\\Administrator\\ideaProjects\\consultant\\src\\main\\resources\\content");
+        List<Document> documents = ClassPathDocumentLoader.loadDocuments("content",new ApachePdfBoxDocumentParser());  //类路劲加载
+        //List<Document> documents = FileSystemDocumentLoader.loadDocuments("C:\\Users\\Administrator\\ideaProjects\\consultant\\src\\main\\resources\\content"); //本地磁盘加载
         //2.构建向量数据库操作对象  操作的是内存版本的向量数据库
         //InMemoryEmbeddingStore store = new InMemoryEmbeddingStore();
 
-        //构建文档分割器对象
+        //构建文档分割器对象，最大片段最大容纳字符，两片段之间的重叠字符个数
         DocumentSplitter ds = DocumentSplitters.recursive(500,100);
         //3.构建一个EmbeddingStoreIngestor对象,完成文本数据切割,向量化, 存储
         EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                 //.embeddingStore(store)
                 .embeddingStore(redisEmbeddingStore)
-                .documentSplitter(ds)
+                .documentSplitter(ds) //设置文档分割器对象
                 .embeddingModel(embeddingModel)
                 .build();
         ingestor.ingest(documents);
@@ -108,12 +108,13 @@ public class CommonConfig {
     /**
      * 构建向量数据库检索对象
      * 构建一个向量数据库检索对象, 这个对象负责向量化文本数据, 存储到向量数据库中
-     * chatMememoryStore对象底层是通过List存储的,服务器启动时,会加载所有的会话记录,然后进行向量化,存储到向量数据库中
+     * RedisSearch实现了向量数据库检索功能
      * @return
      */
     @Bean
     public ContentRetriever contentRetriever(/*EmbeddingStore store*/){
         return EmbeddingStoreContentRetriever.builder()
+//                .embeddingStore(store)
                 .embeddingStore(redisEmbeddingStore)
                 .minScore(0.5)
                 .maxResults(3)

@@ -18,7 +18,7 @@ langchain4j:
       model-name: text-embedding-v3
       log-requests: true
       log-responses: true
-      max-segments-per-batch: 10
+      max-segments-per-batch: 10  # 最大分段数，默认10
 
   community:
     redis:
