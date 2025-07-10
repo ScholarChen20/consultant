@@ -16,13 +16,60 @@ LandChain4j： 基于AI的智能问答工具包
 
 ### （1）AIService
 
-AIService自动创建AI服务，包括问答、聊天、情感分析等功能。
+AIService工具类，可自动实现装配，并自动装配相关组件。
+    
+    @AiService(
+        wiringMode = AiServiceWiringMode.EXPLICIT,//手动装配
+        chatModel = "openAiChatModel",//指定模型
+        streamingChatModel = "openAiStreamingChatModel", //指定流式模型
+        //chatMemory = "chatMemory",//配置会话记忆对象
+        chatMemoryProvider = "chatMemoryProvider",//配置会话记忆提供者对象
+        contentRetriever = "contentRetriever",//配置向量数据库检索对象
+        tools = "reservationTool"   //配置工具集对象
+    )
+
+
+消息注解：
+
+    @UserMessage("你是东哥的助手小月月,人美心善又多金!{{msg}}")      //用户消息
+
+    @SystemMessage(fromResource = "system.txt") //从资源文件中读取系统消息  // 系统消息，系统消息是由系统自动发送的消息，一般用于提示用户一些系统信息
+
 
 ### （2）流式调用
 
+    streamingChatModel = "openAiStreamingChatModel", //指定流式模型
+
+    @RequestMapping(value = "/chat",produces = "text/html;charset=utf-8")
+    public Flux<String> chat(String memoryId,String message){
+        Flux<String> result = consultantService.chat(memoryId,message);
+        return result;
+    }
+
+    public interface ConsultantService {
+        @SystemMessage(fromResource = "system.txt") //从资源文件中读取系统消息
+        public Flux<String> chat(/*@V("msg")*/@MemoryId String memoryId, @UserMessage String message); //Flux<String>返回值表示异步返回结果
+    }
+    
 
 ### （3）会话记忆
 
+实现会话记忆功能，会话记忆功能需要使用Redis作为缓存数据库。
+
+    @Bean 
+    public ChatMemoryProvider chatMemoryProvider(){  //会话记忆提供者对象，用于创建会话记忆对象
+        ChatMemoryProvider chatMemoryProvider = new ChatMemoryProvider() {
+            @Override
+            public ChatMemory get(Object memoryId) {
+                return MessageWindowChatMemory.builder()
+                        .id(memoryId)
+                        .maxMessages(20)
+                        .chatMemoryStore(redisChatMemoryStore) //使用RedisChatMemoryStore来保存会话记录
+                        .build();
+            }
+        };
+        return chatMemoryProvider;
+    }
 
 ### （4）RAG
 RAG核心API：
@@ -52,6 +99,34 @@ RAG核心API：
 4.向量模型
 
 EmbeddingModel：文本嵌入模型，用于把文档分割后的片段向量化或者查询时把用户输入的内容向量化
+    
+    @Bean
+    public EmbeddingStore store(){//embeddingStore的对象, 这个对象的名字不能重复,所以这里使用store
+        //1.加载文档进内存
+        List<Document> documents = ClassPathDocumentLoader.loadDocuments("content",new ApachePdfBoxDocumentParser());  //类路劲加载
+        //构建文档分割器对象，最大片段最大容纳字符，两片段之间的重叠字符个数
+        DocumentSplitter ds = DocumentSplitters.recursive(500,100);
+        //3.构建一个EmbeddingStoreIngestor对象,完成文本数据切割,向量化, 存储
+        EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
+                //.embeddingStore(store)
+                .embeddingStore(redisEmbeddingStore)
+                .documentSplitter(ds) //设置文档分割器对象
+                .embeddingModel(embeddingModel)
+                .build();
+        ingestor.ingest(documents);
+        return redisEmbeddingStore;
+    }
+
+    @Bean
+    public ContentRetriever contentRetriever(/*EmbeddingStore store*/){
+        return EmbeddingStoreContentRetriever.builder()
+                        //                .embeddingStore(store)
+                        .embeddingStore(redisEmbeddingStore)
+                        .minScore(0.5)
+                        .maxResults(3)
+                        .embeddingModel(embeddingModel)
+                        .build();
+        }
 
 ### （5）Tools工具
 
@@ -140,3 +215,8 @@ ReservationTool和ConsultantService核心代码如下：
    ```
 ## 五.项目演示
 
+![chat.png](assert/chat.png)
+
+## 六.AI时代-软件开发
+
+![AI开发.png](assert/AI%E5%BC%80%E5%8F%91.png)
