@@ -53,6 +53,42 @@ RAG核心API：
 
 EmbeddingModel：文本嵌入模型，用于把文档分割后的片段向量化或者查询时把用户输入的内容向量化
 
+### （5）Tools工具
+
+![img_1.png](assert/img_1.png)
+
+ReservationTool和ConsultantService核心代码如下：
+
+
+    @Tool("预约志愿填报服务")
+    public void  addReservation(
+            @P("考生姓名") String name,
+            @P("考生性别") String gender,
+            @P("考生手机号") String phone,
+            @P("预约沟通时间,格式为: yyyy-MM-dd'T'HH:mm") String communicationTime,
+            @P("考生所在省份") String province,
+            @P("考生预估分数") Integer estimatedScore
+    ){
+        Reservation reservation = new Reservation(null,name,gender,phone, LocalDateTime.parse(communicationTime),province,estimatedScore);
+        reservationService.insert(reservation);
+    }
+    //2.工具方法: 查询预约信息
+    @Tool("根据考生手机号查询预约单")
+    public Reservation findReservation(@P("考生手机号") String phone){
+        return reservationService.findByPhone(phone);
+    }
+
+    @AiService(
+            wiringMode = AiServiceWiringMode.EXPLICIT,//手动装配
+            chatModel = "openAiChatModel",//指定模型
+            streamingChatModel = "openAiStreamingChatModel", //指定流式模型
+            //chatMemory = "chatMemory",//配置会话记忆对象
+            chatMemoryProvider = "chatMemoryProvider",//配置会话记忆提供者对象
+            contentRetriever = "contentRetriever",//配置向量数据库检索对象
+            tools = "reservationTool"   //配置工具集对象
+        )
+
+
 
 ## 四.配置文件修改
 
