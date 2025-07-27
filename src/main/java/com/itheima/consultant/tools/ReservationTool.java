@@ -9,12 +9,22 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
-@Component
+@Component //讲工具方法丢入IOC容器中
 public class ReservationTool {
     @Autowired
     private ReservationService reservationService;
 
     //1.工具方法: 添加预约信息
+
+    /**
+     * @P表示对每一个参数进行说明
+     * @param name
+     * @param gender
+     * @param phone
+     * @param communicationTime
+     * @param province
+     * @param estimatedScore
+     */
     @Tool("预约志愿填报服务")
     public void  addReservation(
             @P("考生姓名") String name,
